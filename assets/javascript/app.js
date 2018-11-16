@@ -31,7 +31,7 @@ $(document).ready(function() {
             $("#firebaseui-auth-container").hide();
 
             // Opens the modal asking if the player wants to play.
-            
+            $("#playerWatch").modal("open");
 
             return false;
           },
@@ -126,5 +126,10 @@ $(document).ready(function() {
 
             $("#chat").append(chat);
         });
+    });
+
+    // Initializes modals.
+    $("#playerWatch").modal({
+        dismissible: false
     });
 });
