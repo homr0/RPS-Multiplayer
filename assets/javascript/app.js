@@ -33,6 +33,17 @@ $(document).ready(function() {
             // Opens the modal asking if the player wants to play.
             $("#playerWatch").modal("open");
 
+            // Gets the display name
+            let name = authResult.user.displayName;
+            $("#welcome").text(name);
+
+            // // Gets the login time.
+            // let login = moment(authResult.user.metadata.lastSignInTime, "ddd, DD MMM YYYY HH:mm:ss z").format("YYYY-MM-DD HH:mm");
+
+            // // Finds if the user exists in the database.
+            // var users = database.ref().child("players");
+            // console.log(users);
+
             return false;
           },
           uiShown: function() {
@@ -63,15 +74,33 @@ $(document).ready(function() {
     };
 
     // The start method will wait until the DOM is loaded.
-    ui.start('#firebaseui-auth-container', uiConfig);
+    // ui.start('#firebaseui-auth-container', uiConfig);
+
+    var chatRef = database.ref().child("chat");
+
+    // Function for pushing a chat
+    function chat(playing, user, uid, message) {
+        chatRef.push({
+            player: playing,
+            username: user,
+            uid: uid,
+            message: message,
+            time: moment().format("YYYY-MM-DD HH:mm")
+        });
+    }
+
+    // Pushes a Game Master chat.
+    function chatGM(message) {
+        chat(false, "RPS Game Master", "autoGM", message);
+    }
 
     // At the initial load and subsequent value changes, keep track of which users are playing.
     database.ref().child("players").on("child_added", function(users) {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
-            let username = value.username;
+            let uid = users.key;
 
-            var user = $("<li>").text(username).addClass("user");
+            var user = $("<li>").text(value.username).addClass("user");
 
             // If the user is a player, then hide their name from the watch list.
             if(value.player) {
@@ -80,13 +109,13 @@ $(document).ready(function() {
 
                 // If there is room to play, the user can play.
                 if($("#player1").attr("data-playing") == "") {
-                    $("#player1").text(username).attr("data-playing", username);
+                    $("#player1").text(value.username).attr("data-playing", uid);
 
                     $("#p1Win").text(value.wins);
 
                     $("#p1Lose").text(value.losses);
                 } else if($("#player2").attr("data-playing") == "") {
-                    $("#player2").text(username).attr("data-playing", username);
+                    $("#player2").text(value.username).attr("data-playing", uid);
 
                     $("#p2Win").text(value.wins);
 
@@ -98,14 +127,14 @@ $(document).ready(function() {
             }
 
             // The player is added to the Watch List.
-            $(user).attr("id", users.key);
+            $(user).attr("id", uid);
 
             $("#watchList").append(user);
         });
     });
 
     // At the initial load and subsequent value changes, get a snapshot of the chat data.
-    database.ref().child("chat").on("child_added", function(chats) {
+    chatRef.on("child_added", function(chats) {
         // For each chat, print out the dialogue
         $(chats.val()).each(function(index, value) {
             var chat = $("<li>").addClass("chat");
@@ -126,6 +155,124 @@ $(document).ready(function() {
 
             $("#chat").append(chat);
         });
+    });
+    
+    // When rock, paper, or scissors is clicked, the player is checked and then the two plays are compared.
+    $("[name=rps]").on("click", function(e) {
+        e.preventDefault();
+
+        console.log($(this).val());
+
+        let play1 = "";
+        let play2 = "";
+
+        database.ref("game").once("value").then(function(play) {
+            play1 = play.child("player1").val();
+            play2 = play.child("player2").val();
+            console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
+        });
+
+        // Makes sure that there are two players playing
+        if(($("#player1").attr("data-playing") !== "") && ($("#player2").attr("data-playing") !== "")) {
+            // Gets the user id.
+            var user = firebase.auth().currentUser;
+            
+            let uid = "test";
+
+            if(user !== null) {
+                uid = user.uid;
+            }
+
+            console.log(uid);
+
+            // Checks if the current user is player 1 or player 2 and then updates the game.
+            if($("#player1").attr("data-playing") == uid) {
+                database.ref("game").update({
+                    player1: $(this).val()
+                });
+
+                play1 = $(this).val();
+            } else if($("#player2").attr("data-playing") == uid) {
+                database.ref("game").update({
+                    player2: $(this).val()
+                });
+
+                play2 = $(this).val();
+            }
+
+            // Announces in the chat that the player has decided.
+            chatGM(user.username + " has decided....");
+
+            // Checks if the game can be completed.
+            if((play1 !== "") && (play2 !== "")) {
+                let player1 = $("#player1").text();
+                let player2 = $("#player2").text();
+                let pid1 = $("#player1").attr("data-playing");
+                let pid2 = $("#player2").attr("data-playing");
+
+                chatGM(player1 + " has rolled " + play1 + ".\n" + player2 + " has rolled " + play2 + ".");
+
+                // If both plays are the same, then it's a tie and scores are not updated.
+                if(play1 == play2) {
+                    chatGM(player1 + " and " + player2 + " have tied!");
+                } else {
+                    let winsP1 = parseInt($("#p1Win").text());
+                    let losesP1 = parseInt($("#p1Lose").text());
+                    let winsP2 = parseInt($("#p2Win").text());
+                    let losesP2 = parseInt($("#p2Lose").text());
+
+                    // Sets up the score for winning
+                    var rpsWin = {
+                        "rock": 0,
+                        "paper": 1,
+                        "scissors": 2
+                    }
+
+                    // Translates the play into a number
+                    play1 = rpsWin[play1];
+                    play2 = rpsWin[play2];
+
+                    // Finds winning scenario for Player 1.
+                    let win = play1 - play2;
+                    if((win == 1) || (win == -2)) {
+                        chatGM(player1 + " has won!\n" + player2 + " has lost!");
+
+                        winsP1++;
+                        losesP2++;
+
+                        database.ref("users/" + pid1).update({
+                            wins: winsP1
+                        });
+
+                        $("#p1Win").text(winsP1);
+
+                        database.ref("users/" + pid2).update({
+                            losses: losesP2 + 1
+                        });
+
+                        $("#p2Lose").text(losesP2);
+                    } else {
+                        // Player 2 wins
+                        chatGM(player2 + " has won!\n" + player1 + " has lost!");
+
+                        winsP2++;
+                        losesP1++;
+
+                        database.ref("users/" + pid2).update({
+                            wins: winsP2
+                        });
+
+                        $("#p2Win").text(winsP2);
+
+                        database.ref("users/" + pid1).update({
+                            losses: losesP1
+                        });
+
+                        $("#p1Lose").text(losesP1);
+                    }
+                }
+            }
+        }
     });
 
     // Initializes modals.
