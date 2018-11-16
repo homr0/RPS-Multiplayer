@@ -16,6 +16,7 @@
 </head>
 
 <body>
+
     <header class="navbar-fixed">
         <nav>
             <div class="nav-wrapper blue-grey">
@@ -23,6 +24,12 @@
             </div>
         </nav>
     </header>
+
+    
+    <!-- The surrounding HTML is left untouched by FirebaseUI.
+     Your app may use that space for branding, controls and other customizations.-->
+    <div id="firebaseui-auth-container"></div>
+    <div id="loader">Loading...</div>
 
     <main>
         <div class="container">
@@ -57,7 +64,7 @@
                 <div class="col s6">
                     <div class="card">
                         <div class="card-content center-align">
-                            <h2 class="card-title" id="player1">Player 1</h2>
+                            <h2 class="card-title" id="player1" data-playing="">Player 1</h2>
 
                             <p>Wins: <span id="p1Win">0</span><br>
                             Losses: <span id="p1Lose">0</span></p>
@@ -68,7 +75,7 @@
                 <div class="col s6">
                     <div class="card">
                         <div class="card-content center-align">
-                            <h2 class="card-title" id="player2">Player 2</h2>
+                            <h2 class="card-title" id="player2" data-playing="">Player 2</h2>
 
                             <p>Wins: <span id="p2Win">0</span><br>
                             Losses: <span id="p2Lose">0</span></p>
