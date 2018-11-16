@@ -76,7 +76,13 @@ $(document).ready(function() {
     // The start method will wait until the DOM is loaded.
     // ui.start('#firebaseui-auth-container', uiConfig);
 
+    // Database references
     var chatRef = database.ref().child("chat");
+    var playerRef = database.ref().child("players");
+
+    // Gets the current user/
+    var user = firebase.auth().currentUser;
+    console.log(user);
 
     // Function for pushing a chat
     function chat(playing, user, uid, message) {
@@ -95,7 +101,7 @@ $(document).ready(function() {
     }
 
     // At the initial load and subsequent value changes, keep track of which users are playing.
-    database.ref().child("players").on("child_added", function(users) {
+    playerRef.on("child_added", function(users) {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
             let uid = users.key;
@@ -161,22 +167,17 @@ $(document).ready(function() {
     $("[name=rps]").on("click", function(e) {
         e.preventDefault();
 
-        console.log($(this).val());
-
-        let play1 = "";
-        let play2 = "";
+        var play1 = "";
+        var play2 = "";
 
         database.ref("game").once("value").then(function(play) {
             play1 = play.child("player1").val();
             play2 = play.child("player2").val();
-            console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
         });
 
         // Makes sure that there are two players playing
         if(($("#player1").attr("data-playing") !== "") && ($("#player2").attr("data-playing") !== "")) {
             // Gets the user id.
-            var user = firebase.auth().currentUser;
-            
             let uid = "test";
 
             if(user !== null) {
@@ -273,6 +274,35 @@ $(document).ready(function() {
                 }
             }
         }
+
+        console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
+    });
+
+    // Submits a dialog to the chat.
+    $("#chat-submit").on("click", function(e) {
+        e.preventDefault();
+        let message = $("#chat-text").val().trim();
+
+        let username = "demo";
+        let uid = "test";
+        let player = false;
+
+        // Gets the current user
+        if(user !== null) {
+            username = user.displayName;
+            uid = user.uid;
+
+            // Checks if the current user is a player.
+            if(($("#player1").attr("data-playing") == uid) || ($("#player2").attr("data-playing") == uid)) {
+                player = true;
+            }
+        }
+
+        // Adds the message to the chat
+        chat(player, username, uid, message);
+
+        // Clears the chat
+        $("#chat-text").val("");
     });
 
     // Initializes modals.
