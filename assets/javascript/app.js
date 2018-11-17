@@ -355,6 +355,11 @@ $(document).ready(function() {
 
                         $("#p1Lose").text(losesP1);
                     }
+
+                    // Triggers modal asking players if they want to continue.
+                    if((pid1 == uid) || (pid2 == uid)) {
+                        $("#gameContinue").modal("open");
+                    }
                 }
 
                 finishGame();
