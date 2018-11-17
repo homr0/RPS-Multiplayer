@@ -41,11 +41,11 @@ $(document).ready(function() {
           },
           uiShown: function() {
             // The widget is rendered.
-            // Hide the loader.
-            document.getElementById('loader').style.display = 'none';
+            // Show the authorization popup
+            $("#firebaseui-auth-container").show();
 
-            // Hides the game area.
-            $("main").hide();
+            // Hides the game area and loader.
+            $("main, #loader").hide();
           }
         },
         // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
@@ -57,8 +57,7 @@ $(document).ready(function() {
             // firebase.auth.FacebookAuthProvider.PROVIDER_ID,
             // firebase.auth.TwitterAuthProvider.PROVIDER_ID,
             // firebase.auth.GithubAuthProvider.PROVIDER_ID,
-            firebase.auth.EmailAuthProvider.PROVIDER_ID//,
-            // firebase.auth.PhoneAuthProvider.PROVIDER_ID
+            firebase.auth.EmailAuthProvider.PROVIDER_ID
         ]//,
         // Terms of service url.
         // tosUrl: '<your-tos-url>',
@@ -67,7 +66,7 @@ $(document).ready(function() {
     };
 
     // The start method will wait until the DOM is loaded.
-    // ui.start('#firebaseui-auth-container', uiConfig);
+    ui.start('#firebaseui-auth-container', uiConfig);
 
     // Database references
     var chatRef = database.ref().child("chat");
@@ -101,9 +100,6 @@ $(document).ready(function() {
             uname = user.displayName;
             uid = user.uid;
 
-            console.log("Logged in as " + uname);
-            console.log("User ID: " + uid);
-
             // Check if the user ID is in the user database.
             playerRef.once("value").then(function(player) {
                 if(player.child(uid).exists()) {
@@ -128,7 +124,7 @@ $(document).ready(function() {
         } else {
             // User is signed out.
             playerRef.once("value").then(function(player) {
-                player.child(uid).update({
+                playerRef.child(uid).update({
                     loggedIn: false,
                     player: false
                 });
@@ -144,7 +140,7 @@ $(document).ready(function() {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
             let uid = users.key;
-            let username = users.username;
+            let username = value.username;
 
             var user = $("<li>").text(username).addClass("user");
 
@@ -272,13 +268,13 @@ $(document).ready(function() {
                         winsP1++;
                         losesP2++;
 
-                        database.ref("users/" + pid1).update({
+                        database.ref("players/" + pid1).update({
                             wins: winsP1
                         });
 
                         $("#p1Win").text(winsP1);
 
-                        database.ref("users/" + pid2).update({
+                        database.ref("players/" + pid2).update({
                             losses: losesP2 + 1
                         });
 
@@ -290,13 +286,13 @@ $(document).ready(function() {
                         winsP2++;
                         losesP1++;
 
-                        database.ref("users/" + pid2).update({
+                        database.ref("players/" + pid2).update({
                             wins: winsP2
                         });
 
                         $("#p2Win").text(winsP2);
 
-                        database.ref("users/" + pid1).update({
+                        database.ref("players/" + pid1).update({
                             losses: losesP1
                         });
 
@@ -307,6 +303,56 @@ $(document).ready(function() {
         }
 
         console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
+    });
+
+    // Lets a watcher enter the game as a player.
+    $(".gameJoin").on("click", function(e) {
+        e.preventDefault();
+        console.log("Adding a player to the game", uid);
+        $("#" + uid).addClass("player");
+
+        // Checks if there is a vacant player spot.
+        let playing1 = $("#player1").attr("data-playing");
+        let playing2 = $("#player2").attr("data-playing");
+
+        if(playing1 == "") {
+            $("#player1").text(uname).attr("data-playing", uid);
+
+            database.ref("players/" + uid).once("value").then(function(player) {
+                $("#p1Win").text(player.val().wins);
+                $("#p1Lose").text(player.val().losses);
+            });
+        } else if((playing2 == "") && (playing1 !== uid)) {
+            $("#player2").text(uname).attr("data-playing", uid);
+
+            database.ref("players/" + uid).once("value").then(function(player) {
+                $("#p2Win").text(player.val().wins);
+                $("#p2Lose").text(player.val().losses);
+            });
+        } else if((playing1 !== uid) && (playing2 !== uid)) {
+            // Player is added to the Wait List
+            var waiting = $("<li>").text(uname).attr("data-waiting", uid);
+
+            $("#waitList").append(waiting);
+        }
+
+        // Button is disabled until the user becomes a watcher
+        $(".gameJoin").addClass("disabled");
+    });
+
+    // Logs out of the game
+    $(".gameLeave").on("click", function(e) {
+        e.preventDefault();
+
+        // Logs the user out
+        firebase.auth().signOut().then(function() {
+            // Sign-out successful.
+            // Show the sign-in again.
+            ui.start('#firebaseui-auth-container', uiConfig);
+        }).catch(function(error) {
+            // An error happened.
+            console.log(error);
+        });
     });
 
     // Submits a dialog to the chat.
@@ -327,7 +373,15 @@ $(document).ready(function() {
     });
 
     // Initializes modals.
-    $("#playerWatch").modal({
+    $(".modal").modal({
         dismissible: false
     });
+
+    // Initializes side navs.
+    $('.sidenav').sidenav({
+        edge: 'right'
+    });
+
+    // Initializes tooltips.
+    $('.tooltipped').tooltip();
 });
