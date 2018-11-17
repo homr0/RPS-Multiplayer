@@ -37,13 +37,6 @@ $(document).ready(function() {
             let name = authResult.user.displayName;
             $("#welcome").text(name);
 
-            // // Gets the login time.
-            // let login = moment(authResult.user.metadata.lastSignInTime, "ddd, DD MMM YYYY HH:mm:ss z").format("YYYY-MM-DD HH:mm");
-
-            // // Finds if the user exists in the database.
-            // var users = database.ref().child("players");
-            // console.log(users);
-
             return false;
           },
           uiShown: function() {
@@ -80,9 +73,10 @@ $(document).ready(function() {
     var chatRef = database.ref().child("chat");
     var playerRef = database.ref().child("players");
 
-    // Gets the current user/
-    var user = firebase.auth().currentUser;
-    console.log(user);
+    // Default information for user.
+    var uname = "demo";
+    var uid = "test";
+    var playing = false;
 
     // Function for pushing a chat
     function chat(playing, user, uid, message) {
@@ -100,13 +94,59 @@ $(document).ready(function() {
         chat(false, "RPS Game Master", "autoGM", message);
     }
 
+    // Watches for user status
+    firebase.auth().onAuthStateChanged(function(user) {
+        if(user) {
+            // User is signed in.
+            uname = user.displayName;
+            uid = user.uid;
+
+            console.log("Logged in as " + uname);
+            console.log("User ID: " + uid);
+
+            // Check if the user ID is in the user database.
+            playerRef.once("value").then(function(player) {
+                if(player.child(uid).exists()) {
+                    // The player is logged in.
+                    playerRef.child(uid).update({
+                        loggedIn: true,
+                        lastLogin: moment().format("YYYY-MM-DD HH:mm"),
+                        player: false
+                    });
+                } else {
+                    // The player is added to the user database
+                    playerRef.child(uid).set({
+                        loggedIn: true,
+                        lastLogin: moment().format("YYYY-MM-DD HH:mm"),
+                        player: false,
+                        username: uname,
+                        wins: 0,
+                        losses: 0
+                    });
+                }
+            });
+        } else {
+            // User is signed out.
+            playerRef.once("value").then(function(player) {
+                player.child(uid).update({
+                    loggedIn: false,
+                    player: false
+                });
+            });
+
+            uname = "demo";
+            uid = "test";
+        }
+    });
+
     // At the initial load and subsequent value changes, keep track of which users are playing.
     playerRef.on("child_added", function(users) {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
             let uid = users.key;
+            let username = users.username;
 
-            var user = $("<li>").text(value.username).addClass("user");
+            var user = $("<li>").text(username).addClass("user");
 
             // If the user is a player, then hide their name from the watch list.
             if(value.player) {
@@ -115,13 +155,13 @@ $(document).ready(function() {
 
                 // If there is room to play, the user can play.
                 if($("#player1").attr("data-playing") == "") {
-                    $("#player1").text(value.username).attr("data-playing", uid);
+                    $("#player1").text(username).attr("data-playing", uid);
 
                     $("#p1Win").text(value.wins);
 
                     $("#p1Lose").text(value.losses);
                 } else if($("#player2").attr("data-playing") == "") {
-                    $("#player2").text(value.username).attr("data-playing", uid);
+                    $("#player2").text(username).attr("data-playing", uid);
 
                     $("#p2Win").text(value.wins);
 
@@ -177,15 +217,6 @@ $(document).ready(function() {
 
         // Makes sure that there are two players playing
         if(($("#player1").attr("data-playing") !== "") && ($("#player2").attr("data-playing") !== "")) {
-            // Gets the user id.
-            let uid = "test";
-
-            if(user !== null) {
-                uid = user.uid;
-            }
-
-            console.log(uid);
-
             // Checks if the current user is player 1 or player 2 and then updates the game.
             if($("#player1").attr("data-playing") == uid) {
                 database.ref("game").update({
@@ -202,7 +233,7 @@ $(document).ready(function() {
             }
 
             // Announces in the chat that the player has decided.
-            chatGM(user.username + " has decided....");
+            chatGM(uname + " has decided....");
 
             // Checks if the game can be completed.
             if((play1 !== "") && (play2 !== "")) {
@@ -283,23 +314,13 @@ $(document).ready(function() {
         e.preventDefault();
         let message = $("#chat-text").val().trim();
 
-        let username = "demo";
-        let uid = "test";
-        let player = false;
-
-        // Gets the current user
-        if(user !== null) {
-            username = user.displayName;
-            uid = user.uid;
-
-            // Checks if the current user is a player.
-            if(($("#player1").attr("data-playing") == uid) || ($("#player2").attr("data-playing") == uid)) {
-                player = true;
-            }
+        // Checks if the current user is a player.
+        if(($("#player1").attr("data-playing") == uid) || ($("#player2").attr("data-playing") == uid)) {
+            playing = true;
         }
 
         // Adds the message to the chat
-        chat(player, username, uid, message);
+        chat(playing, uname, uid, message);
 
         // Clears the chat
         $("#chat-text").val("");
