@@ -77,6 +77,16 @@ $(document).ready(function() {
     var uid = "test";
     var playing = false;
 
+    // The wait list
+    var waitingList = [];
+
+    // Sets up the score for winning
+    var rpsWin = {
+        "rock": 0,
+        "paper": 1,
+        "scissors": 2
+    }
+
     // Function for pushing a chat
     function chat(playing, user, uid, message) {
         chatRef.push({
@@ -104,7 +114,7 @@ $(document).ready(function() {
             playerRef.once("value").then(function(player) {
                 if(player.child(uid).exists()) {
                     // The player is logged in.
-                    playerRef.child(uid).update({
+                    database.ref("players/" + uid).update({
                         loggedIn: true,
                         lastLogin: moment().format("YYYY-MM-DD HH:mm"),
                         player: false
@@ -142,36 +152,14 @@ $(document).ready(function() {
             let uid = users.key;
             let username = value.username;
 
-            var user = $("<li>").text(username).addClass("user");
+            if(value.loggedIn) {
+                var user = $("<li>").text(username).addClass("user");
 
-            // If the user is a player, then hide their name from the watch list.
-            if(value.player) {
-                // Hides the player from the watch list.
-                user.addClass("player");
-
-                // If there is room to play, the user can play.
-                if($("#player1").attr("data-playing") == "") {
-                    $("#player1").text(username).attr("data-playing", uid);
-
-                    $("#p1Win").text(value.wins);
-
-                    $("#p1Lose").text(value.losses);
-                } else if($("#player2").attr("data-playing") == "") {
-                    $("#player2").text(username).attr("data-playing", uid);
-
-                    $("#p2Win").text(value.wins);
-
-                    $("#p2Lose").text(value.losses);
-                } else {
-                    // Any other people who wish to play are added to the Wait List.
-                    $("#waitList").append(user);
-                }
+                // The player is added to the Watch List.
+                $(user).attr("id", uid);
+    
+                $("#watchList").append(user);
             }
-
-            // The player is added to the Watch List.
-            $(user).attr("id", uid);
-
-            $("#watchList").append(user);
         });
     });
 
@@ -198,18 +186,177 @@ $(document).ready(function() {
             $("#chat").append(chat);
         });
     });
-    
-    // When rock, paper, or scissors is clicked, the player is checked and then the two plays are compared.
-    $("[name=rps]").on("click", function(e) {
-        e.preventDefault();
+
+    // Sets up the waiting list
+    database.ref().once("value").then(function(snapshot) {
+        if(snapshot.child("waiting").exists()) {
+            waitingList = JSON.parse(snapshot.child("waiting").val());
+        }
+    });
+
+    // Watches for when a player joins
+    playerRef.on("child_changed", function(users) {
+        $(users.val()).each(function(index, value) {
+            let userKey = users.key;
+
+            // If the user is waiting to play, then see if they're on the list.
+            if(value.player) {
+                $("#" + userKey).addClass("player");
+
+                // If the user is not on the waiting list, then add them.
+                if(waitingList.indexOf(userKey) < 0) {
+                    waitingList.push(userKey);
+                }
+            } else {
+                $("#" + userKey).removeClass("player");
+
+                // Check if the player is on the list and remove them.
+                let waitingPos = waitingList.indexOf(userKey);
+                if(waitingPos >= 0) {
+                    waitingList.splice(waitingPos, 1);
+                }
+            }
+
+            // If the user is not on the list, then remove them.
+            if(!value.loggedIn) {
+                $("#" + userKey).remove();
+            }
+        });
+
+        // Updates the waiting list in the database.
+        database.ref("waiting").set(JSON.stringify(waitingList));
+
+        // Goes through the waiting list to set the players
+        if(waitingList.length > 1) {
+            console.log(waitingList);
+            let idP1 = waitingList[0];
+            let idP2 = waitingList[1];
+
+            // Gets Player 1.
+            database.ref("players/" + idP1).once("value").then(function(player) {
+                let play = player.val();
+                
+                $("#player1").text(play.username).attr("data-playing", idP1);
+
+                $("#p1Win").text(play.wins);
+                $("#p1Lose").text(play.losses);
+            });
+
+            // Gets Player 2.
+            database.ref("players/" + idP2).once("value").then(function(player) {
+                let play = player.val();
+
+                $("#player2").text(play.username).attr("data-playing", idP2);
+
+                $("#p2Win").text(play.wins);
+                $("#p2Lose").text(play.losses);
+            });
+
+            // Creates the waiting list.
+            for(let i = 2; i < waitingList.length; i++) {
+                var waiting = $("<li>").text($("#" + waitingList[i]).val());
+
+                $("#waitList").append(waiting);
+            }
+        } else {
+            // Clear the player panels.
+            $("#player1").text("Player 1");
+            $("#player2").text("Player 2");
+            $("#player1, #player2").attr("data-playing", "");
+            $("#p1Win, #p1Lose, #p2Win, #p2Lose").text("0");
+        }
+    });
+
+    // Watches for game changes.
+    database.ref().on("child_changed", function(play) {
+        console.log(play.val());
+        // var play1 = play.val().player1;
+        // var play2 = play.val().player2;
 
         var play1 = "";
         var play2 = "";
 
-        database.ref("game").once("value").then(function(play) {
-            play1 = play.child("player1").val();
-            play2 = play.child("player2").val();
-        });
+        console.log(play1, play2);
+
+        // Makes sure both plays aren't blank.
+        if(((play1 !== "") && (play2 !== "")) && ((play1 !== null) && (play2 !== null))) {
+            let player1 = $("#player1").text();
+            let player2 = $("#player2").text();
+
+            // Chat announces what the plays are.
+            chatGM(player1 + " has rolled " + play1 + ".\n" + player2 + " has rolled " + play2 + ".");
+
+            // Checks the win conditions.
+            if(play1 == play2) {
+                // If both plays are the same, then it's a tie.
+                chatGM(player1 + " and " + player2 + " have tied!");
+            } else {
+                // Determine who the winner is.
+                let winsP1 = parseInt($("#p1Win").text());
+                let losesP1 = parseInt($("#p1Lose").text());
+                let winsP2 = parseInt($("#p2Win").text());
+                let losesP2 = parseInt($("#p2Lose").text());
+
+                let pid1 = $("#player1").attr("data-playing");
+                let pid2 = $("#player2").attr("data-playing");
+
+                // Translates the play into a number
+                play1 = rpsWin[play1];
+                play2 = rpsWin[play2];
+
+                // Finds winning scenario for Player 1.
+                let win = play1 - play2;
+                if((win == 1) || (win == -2)) {
+                    chatGM(player1 + " has won!\n" + player2 + " has lost!");
+
+                    winsP1++;
+                    losesP2++;
+
+                    database.ref("players/" + pid1).update({
+                        wins: winsP1
+                    });
+
+                    $("#p1Win").text(winsP1);
+
+                    database.ref("players/" + pid2).update({
+                        losses: losesP2 + 1
+                    });
+
+                    $("#p2Lose").text(losesP2);
+                } else {
+                    // Player 2 wins
+                    chatGM(player2 + " has won!\n" + player1 + " has lost!");
+
+                    winsP2++;
+                    losesP1++;
+
+                    database.ref("players/" + pid2).update({
+                        wins: winsP2
+                    });
+
+                    $("#p2Win").text(winsP2);
+
+                    database.ref("players/" + pid1).update({
+                        losses: losesP1
+                    });
+
+                    $("#p1Lose").text(losesP1);
+                }
+            }
+
+            // Clears the game selections upon completion.
+            database.ref("game").update({
+                player1: "",
+                player2: ""
+            });
+        }
+
+        console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
+    });
+    
+    // When rock, paper, or scissors is clicked, the play is updated in the database.
+    $("[name=rps]").on("click", function(e) {
+        e.preventDefault();
 
         // Makes sure that there are two players playing
         if(($("#player1").attr("data-playing") !== "") && ($("#player2").attr("data-playing") !== "")) {
@@ -218,123 +365,25 @@ $(document).ready(function() {
                 database.ref("game").update({
                     player1: $(this).val()
                 });
-
-                play1 = $(this).val();
             } else if($("#player2").attr("data-playing") == uid) {
                 database.ref("game").update({
                     player2: $(this).val()
                 });
-
-                play2 = $(this).val();
             }
 
             // Announces in the chat that the player has decided.
             chatGM(uname + " has decided....");
-
-            // Checks if the game can be completed.
-            if((play1 !== "") && (play2 !== "")) {
-                let player1 = $("#player1").text();
-                let player2 = $("#player2").text();
-                let pid1 = $("#player1").attr("data-playing");
-                let pid2 = $("#player2").attr("data-playing");
-
-                chatGM(player1 + " has rolled " + play1 + ".\n" + player2 + " has rolled " + play2 + ".");
-
-                // If both plays are the same, then it's a tie and scores are not updated.
-                if(play1 == play2) {
-                    chatGM(player1 + " and " + player2 + " have tied!");
-                } else {
-                    let winsP1 = parseInt($("#p1Win").text());
-                    let losesP1 = parseInt($("#p1Lose").text());
-                    let winsP2 = parseInt($("#p2Win").text());
-                    let losesP2 = parseInt($("#p2Lose").text());
-
-                    // Sets up the score for winning
-                    var rpsWin = {
-                        "rock": 0,
-                        "paper": 1,
-                        "scissors": 2
-                    }
-
-                    // Translates the play into a number
-                    play1 = rpsWin[play1];
-                    play2 = rpsWin[play2];
-
-                    // Finds winning scenario for Player 1.
-                    let win = play1 - play2;
-                    if((win == 1) || (win == -2)) {
-                        chatGM(player1 + " has won!\n" + player2 + " has lost!");
-
-                        winsP1++;
-                        losesP2++;
-
-                        database.ref("players/" + pid1).update({
-                            wins: winsP1
-                        });
-
-                        $("#p1Win").text(winsP1);
-
-                        database.ref("players/" + pid2).update({
-                            losses: losesP2 + 1
-                        });
-
-                        $("#p2Lose").text(losesP2);
-                    } else {
-                        // Player 2 wins
-                        chatGM(player2 + " has won!\n" + player1 + " has lost!");
-
-                        winsP2++;
-                        losesP1++;
-
-                        database.ref("players/" + pid2).update({
-                            wins: winsP2
-                        });
-
-                        $("#p2Win").text(winsP2);
-
-                        database.ref("players/" + pid1).update({
-                            losses: losesP1
-                        });
-
-                        $("#p1Lose").text(losesP1);
-                    }
-                }
-            }
         }
-
-        console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
     });
 
     // Lets a watcher enter the game as a player.
     $(".gameJoin").on("click", function(e) {
         e.preventDefault();
-        console.log("Adding a player to the game", uid);
         $("#" + uid).addClass("player");
 
-        // Checks if there is a vacant player spot.
-        let playing1 = $("#player1").attr("data-playing");
-        let playing2 = $("#player2").attr("data-playing");
-
-        if(playing1 == "") {
-            $("#player1").text(uname).attr("data-playing", uid);
-
-            database.ref("players/" + uid).once("value").then(function(player) {
-                $("#p1Win").text(player.val().wins);
-                $("#p1Lose").text(player.val().losses);
-            });
-        } else if((playing2 == "") && (playing1 !== uid)) {
-            $("#player2").text(uname).attr("data-playing", uid);
-
-            database.ref("players/" + uid).once("value").then(function(player) {
-                $("#p2Win").text(player.val().wins);
-                $("#p2Lose").text(player.val().losses);
-            });
-        } else if((playing1 !== uid) && (playing2 !== uid)) {
-            // Player is added to the Wait List
-            var waiting = $("<li>").text(uname).attr("data-waiting", uid);
-
-            $("#waitList").append(waiting);
-        }
+        database.ref("players/" + uid).update({
+            player: true
+        });
 
         // Button is disabled until the user becomes a watcher
         $(".gameJoin").addClass("disabled");
@@ -347,6 +396,15 @@ $(document).ready(function() {
         // Logs the user out
         firebase.auth().signOut().then(function() {
             // Sign-out successful.
+            // Updates the user to not be a player.
+            database.ref("players/" + uid).update({
+                player: false,
+                loggedIn: false
+            });
+
+            // Removes the player from the Watch List
+            $("#" + uid).remove();
+
             // Show the sign-in again.
             ui.start('#firebaseui-auth-container', uiConfig);
         }).catch(function(error) {
