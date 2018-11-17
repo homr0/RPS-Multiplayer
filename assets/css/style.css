@@ -5,7 +5,9 @@ body {
     display: flex;
     min-height: 100vh;
     flex-direction: column;
+    background-image: url('../images/pool_table.png');
     font-family: "Roboto Condensed", Arial, Helvetica, sans-serif;
+    color: rgba(63, 63, 63, 0.9);
 }
 
 h1, h2, h3, h4, h5, h6, .brand-logo {
@@ -14,4 +16,78 @@ h1, h2, h3, h4, h5, h6, .brand-logo {
 
 header, main {
     flex: 1 0 auto;
+}
+
+main .card {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+main .card-title {
+    font-size: 200%;
+}
+
+main #player1 {
+    color: rgba(127, 0, 0, 0.9);
+}
+
+main #player2 {
+    color: rgba(0, 0, 127, 0.9);
+}
+
+input[name=rps] {
+    opacity: 0;
+}
+
+[name=rps] + i {
+    font-size: 10em;
+    color: rgba(225, 225, 0, 0.9);
+    background-color: rgba(63, 63, 63, 0.75);
+    padding: 1rem;
+}
+
+[name=rps] + i:hover {
+    cursor: pointer;
+    color: rgba(255, 255, 0, 0.9);
+    
+}
+
+[name=rps] + i.fa-hand-scissors {
+    transform: scaleY(-1) rotate(270deg);
+}
+
+#chat {
+    background: rgba(255, 255, 255, 1);
+    padding: 1rem;
+    overflow: auto;
+    max-height: 25rem
+}
+
+#chat .chat {
+    padding: 0.5rem;
+}
+
+#chat .chat:nth-child(2n) {
+    background-color: rgba(225, 225, 255, 0.9);
+}
+
+#chat .chat-date {
+    font-style: italic;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+#chat .username {
+    font-weight: 700;
+}
+
+#chat .username.player {
+    color: rgba(127, 0, 127, 0.9);
+}
+
+#watchList .player {
+    display: none;
+}
+
+.modal strong {
+    font-weight: 700;
 }
