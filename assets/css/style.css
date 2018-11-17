@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css?family=Passion+One|Roboto+Condensed');
+@import url('https://fonts.googleapis.com/css?family=Passion+One|Roboto+Condensed|Montserrat');
 
 
 body {
@@ -59,11 +59,17 @@ input[name=rps] {
     background: rgba(255, 255, 255, 1);
     padding: 1rem;
     overflow: auto;
-    max-height: 25rem
+    max-height: 25rem;
+    font-family: 'Montserrat', Verdana, Geneva, Tahoma, sans-serif;
 }
 
 #chat .chat {
     padding: 0.5rem;
+}
+
+#chat .logGM {
+    font-style: oblique;
+    font-weight: 700;
 }
 
 #chat .chat:nth-child(2n) {
@@ -82,6 +88,10 @@ input[name=rps] {
 
 #chat .username.player {
     color: rgba(127, 0, 127, 0.9);
+}
+
+#chat-submit {
+    background-color: rgba(127, 127, 225, 1);
 }
 
 #watchList .player {
