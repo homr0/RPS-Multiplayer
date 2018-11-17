@@ -45,7 +45,7 @@ $(document).ready(function() {
             $("#firebaseui-auth-container").show();
 
             // Hides the game area and loader.
-            $("main, #loader").hide();
+            $("main, #loader, #gameControl").hide();
           }
         },
         // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
@@ -159,9 +159,7 @@ $(document).ready(function() {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
             let uid = users.key;
-            let username = value.username;
-
-            console.log(username + " logged in? " + value.loggedIn);
+            let username = value.username;;
 
             if(value.loggedIn) {
                 var user = $("<li>").text(username).addClass("user");
@@ -272,6 +270,11 @@ $(document).ready(function() {
                 var waiting = $("<li>").text($("#" + waitingList[i]).val());
 
                 $("#waitList").append(waiting);
+            }
+
+            // Shows the game controls for the players
+            if((uid == idP1) || (uid == idP2)) {
+                $("#gameControl").show();
             }
         } else {
             // Clear the player panels.
@@ -416,6 +419,18 @@ $(document).ready(function() {
             // An error happened.
             console.log(error);
         });
+    });
+
+    // Quit playing and return to watching
+    $("#willQuit").on("click", function(e) {
+        e.preventDefault();
+
+        database.ref("players/" + uid).update({
+            player: false,
+        });
+
+        $("#gameControl").hide();
+        $(".gameJoin").removeClass("disabled");
     });
 
     // Submits a dialog to the chat.
