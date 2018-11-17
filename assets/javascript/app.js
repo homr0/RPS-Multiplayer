@@ -103,6 +103,15 @@ $(document).ready(function() {
         chat(false, "RPS Game Master", "autoGM", message);
     }
 
+    // Clears the gameplay.
+    function finishGame() {
+        // Clears the game selections upon completion.
+        database.ref("game").update({
+            player1: "",
+            player2: ""
+        });
+    }
+
     // Watches for user status
     firebase.auth().onAuthStateChanged(function(user) {
         if(user) {
@@ -179,7 +188,7 @@ $(document).ready(function() {
                 username.addClass("player");
             }
 
-            var message = $("<span>").text(value.message);
+            var message = $("<span>").html(value.message);
 
             chat.append(date, "<br>", username, ": ", message);
 
@@ -228,7 +237,6 @@ $(document).ready(function() {
 
         // Goes through the waiting list to set the players
         if(waitingList.length > 1) {
-            console.log(waitingList);
             let idP1 = waitingList[0];
             let idP2 = waitingList[1];
 
@@ -268,90 +276,80 @@ $(document).ready(function() {
     });
 
     // Watches for game changes.
-    database.ref().on("child_changed", function(play) {
-        console.log(play.val());
-        // var play1 = play.val().player1;
-        // var play2 = play.val().player2;
+    database.ref("game").on("child_changed", function(play) {
+        database.ref("game").once("value").then(function(playing) {
+            var play1 = playing.val().player1;
+            var play2 = playing.val().player2;
 
-        var play1 = "";
-        var play2 = "";
+            // Makes sure both plays aren't blank.
+            if((play1 !== "") && (play2 !== "")) {
+                let player1 = $("#player1").text();
+                let player2 = $("#player2").text();
 
-        console.log(play1, play2);
+                // Chat announces what the plays are.
+                chatGM(player1 + " has rolled " + play1 + ".<br>" + player2 + " has rolled " + play2 + ".");
 
-        // Makes sure both plays aren't blank.
-        if(((play1 !== "") && (play2 !== "")) && ((play1 !== null) && (play2 !== null))) {
-            let player1 = $("#player1").text();
-            let player2 = $("#player2").text();
-
-            // Chat announces what the plays are.
-            chatGM(player1 + " has rolled " + play1 + ".\n" + player2 + " has rolled " + play2 + ".");
-
-            // Checks the win conditions.
-            if(play1 == play2) {
-                // If both plays are the same, then it's a tie.
-                chatGM(player1 + " and " + player2 + " have tied!");
-            } else {
-                // Determine who the winner is.
-                let winsP1 = parseInt($("#p1Win").text());
-                let losesP1 = parseInt($("#p1Lose").text());
-                let winsP2 = parseInt($("#p2Win").text());
-                let losesP2 = parseInt($("#p2Lose").text());
-
-                let pid1 = $("#player1").attr("data-playing");
-                let pid2 = $("#player2").attr("data-playing");
-
-                // Translates the play into a number
-                play1 = rpsWin[play1];
-                play2 = rpsWin[play2];
-
-                // Finds winning scenario for Player 1.
-                let win = play1 - play2;
-                if((win == 1) || (win == -2)) {
-                    chatGM(player1 + " has won!\n" + player2 + " has lost!");
-
-                    winsP1++;
-                    losesP2++;
-
-                    database.ref("players/" + pid1).update({
-                        wins: winsP1
-                    });
-
-                    $("#p1Win").text(winsP1);
-
-                    database.ref("players/" + pid2).update({
-                        losses: losesP2 + 1
-                    });
-
-                    $("#p2Lose").text(losesP2);
+                // Checks the win conditions.
+                if(play1 == play2) {
+                    // If both plays are the same, then it's a tie.
+                    chatGM(player1 + " and " + player2 + " have tied!");
                 } else {
-                    // Player 2 wins
-                    chatGM(player2 + " has won!\n" + player1 + " has lost!");
+                    // Determine who the winner is.
+                    let winsP1 = parseInt($("#p1Win").text());
+                    let losesP1 = parseInt($("#p1Lose").text());
+                    let winsP2 = parseInt($("#p2Win").text());
+                    let losesP2 = parseInt($("#p2Lose").text());
 
-                    winsP2++;
-                    losesP1++;
+                    let pid1 = $("#player1").attr("data-playing");
+                    let pid2 = $("#player2").attr("data-playing");
 
-                    database.ref("players/" + pid2).update({
-                        wins: winsP2
-                    });
+                    // Translates the play into a number
+                    play1 = rpsWin[play1];
+                    play2 = rpsWin[play2];
 
-                    $("#p2Win").text(winsP2);
+                    // Finds winning scenario for Player 1.
+                    let win = play1 - play2;
+                    if((win == 1) || (win == -2)) {
+                        chatGM(player1 + " has won!<br>" + player2 + " has lost!");
 
-                    database.ref("players/" + pid1).update({
-                        losses: losesP1
-                    });
+                        winsP1++;
+                        losesP2++;
 
-                    $("#p1Lose").text(losesP1);
+                        database.ref("players/" + pid1).update({
+                            wins: winsP1
+                        });
+
+                        $("#p1Win").text(winsP1);
+
+                        database.ref("players/" + pid2).update({
+                            losses: losesP2
+                        });
+
+                        $("#p2Lose").text(losesP2);
+                    } else {
+                        // Player 2 wins
+                        chatGM(player2 + " has won!<br>" + player1 + " has lost!");
+
+                        winsP2++;
+                        losesP1++;
+
+                        database.ref("players/" + pid2).update({
+                            wins: winsP2
+                        });
+
+                        $("#p2Win").text(winsP2);
+
+                        database.ref("players/" + pid1).update({
+                            losses: losesP1
+                        });
+
+                        $("#p1Lose").text(losesP1);
+                    }
                 }
+
+                finishGame();
             }
-
-            // Clears the game selections upon completion.
-            database.ref("game").update({
-                player1: "",
-                player2: ""
-            });
-        }
-
-        console.log("Player 1: " + play1 + "\nPlayer 2: " + play2);
+        });
     });
     
     // When rock, paper, or scissors is clicked, the play is updated in the database.
