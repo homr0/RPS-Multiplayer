@@ -155,11 +155,13 @@ $(document).ready(function() {
     });
 
     // At the initial load and subsequent value changes, keep track of which users are playing.
-    playerRef.on("child_added", function(users) {
+    database.ref("players").on("child_added", function(users) {
         // Display all users on the watch list.
         $(users.val()).each(function(index, value) {
             let uid = users.key;
             let username = value.username;
+
+            console.log(username + " logged in? " + value.loggedIn);
 
             if(value.loggedIn) {
                 var user = $("<li>").text(username).addClass("user");
@@ -229,6 +231,11 @@ $(document).ready(function() {
             // If the user is not on the list, then remove them.
             if(!value.loggedIn) {
                 $("#" + userKey).remove();
+            } else if(value.loggedIn && ($("#" + userKey).length == 0)) {
+                // Adds a newly logged in user to the list.
+                let newUser = $("<li>").text(value.username).addClass("user").attr("id", userKey);
+
+                $("#watchList").append(newUser);
             }
         });
 
