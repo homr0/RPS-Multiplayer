@@ -306,7 +306,7 @@ $(document).ready(function() {
 
             chat.append(date, "<br>", username, ": ", message);
 
-            $("#chat").append(chat);
+            $("#chat").prepend(chat);
         });
     });
 
