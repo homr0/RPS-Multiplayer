@@ -376,8 +376,9 @@ $(document).ready(function() {
             });
 
             // Creates the waiting list.
+            $("#waitList").empty();
             for(let i = 2; i < waitingList.length; i++) {
-                var waiting = $("<li>").text($("#" + waitingList[i]).val());
+                var waiting = $("<li>").text($("#" + waitingList[i]).text());
 
                 $("#waitList").append(waiting);
             }
