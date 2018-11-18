@@ -401,12 +401,12 @@ $(document).ready(function() {
     });
 
     // Watches for when a player disconnects.
-    database.ref("players/" + uid).onDisconnect().update({
-        loggedIn: false,
-        player: false
-    }).then(function() {
-        $(".gameLeave").trigger("click");
-    });
+    // database.ref("players/" + uid).onDisconnect().update({
+    //     loggedIn: false,
+    //     player: false
+    // }).then(function() {
+    //     $(".gameLeave").trigger("click");
+    // });
 
     // Watches for game changes.
     database.ref("game").on("child_changed", function(play) {
