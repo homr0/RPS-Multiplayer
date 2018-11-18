@@ -268,6 +268,10 @@ $(document).ready(function() {
             if(value.loggedIn) {
                 var user = $("<li>").text(username).addClass("user");
 
+                if(value.player) {
+
+                }
+
                 // The player is added to the Watch List.
                 $(user).attr("id", uid);
     
@@ -394,6 +398,14 @@ $(document).ready(function() {
             $("#player1, #player2").attr("data-playing", "");
             $("#p1Win, #p1Lose, #p2Win, #p2Lose").text("0");
         }
+    });
+
+    // Watches for when a player disconnects.
+    database.ref("players/" + uid).onDisconnect().update({
+        loggedIn: false,
+        player: false
+    }).then(function() {
+        $(".gameLeave").trigger("click");
     });
 
     // Watches for game changes.
