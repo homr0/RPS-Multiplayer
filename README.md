@@ -20,7 +20,3 @@ Play against another player in rock-paper-scissors. Or just watch two different 
 3. Each player can choose whether to roll *rock*, *paper*, or *scissors* by clicking the respective buttons for those.
 4. Once both players have picked their play, the winner is determined.
 5. Players can choose whether to continue or to leave the game.
-
-### Current Bugs
-
-- Victory condition message repeats.
