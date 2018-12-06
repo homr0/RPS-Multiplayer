@@ -26,3 +26,11 @@ Play against another player in rock-paper-scissors. Or just watch two different 
 - Anyone logged in can use the chat.
 - Trash talk is allowed.
 - There is no moderation for words, so please watch your language.
+
+## Developer Diary
+
+While a single player rock-paper-scissors game is possible when playing against the computer with a random roll of rock, paper, or scissors, implementing two human players would not be possible with just client-side code.
+
+To allow for multiple human players, I utilized Firebase and a login system so that anyone who accesses the site is required to log in. This allows the system to track who is currently playing the game, who is waiting to play, and who is currently watching the game.
+
+Additionally, in addition to player data, the Firebase system also allows me to keep track of whether each player has picked rock, paper, or scissors, as well as allow the chat log to be seen by all logged in users.
