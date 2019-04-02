@@ -4,21 +4,29 @@ Play against another player in rock-paper-scissors. Or just watch two different 
 
 ## Instructions
 
+![RPS login](/assets/images/rps-login.PNG)
+
 1. Log in with your user name and password.
+![RPS logged in](/assets/images/rps-logged-in.PNG)
 2. Choose whether you want to be a player or a watcher.
 3. Both players and watchers can comment in the chat during the game.
 
 ### Watchers
+
+![RPS watchers](/assets/images/rps-watch.PNG)
 
 1. Watchers appear on the **Watch List**.
 2. Watchers who want to play can move themselves to the **Wait List**.
 
 ### Player
 
+![RPS players](/assets/images/rps-players.PNG)
+
 1. If there are more than **2** players, then any other users wanting to play are moved to the **Wait List**.
 2. Otherwise, the players will appear as **Player 1** and **Player 2**.
 3. Each player can choose whether to roll *rock*, *paper*, or *scissors* by clicking the respective buttons for those.
 4. Once both players have picked their play, the winner is determined.
+![RPS win](/assets/images/rps-win.PNG)
 5. Players can choose whether to continue or to leave the game after the match is over.
 
 ### Chat Etiquette
